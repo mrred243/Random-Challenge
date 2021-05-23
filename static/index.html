@@ -1,0 +1,247 @@
+<html>
+<head>
+  <title>File System</title>
+  <style>
+    body {
+      background-color: #FFF;
+      color: #000;
+      font-family: 'Helvetica Neue', sans-serif;
+      padding: 20px;
+      box-sizing: border-box;
+      font-size: 12px;
+      line-height: 150%;
+    }
+
+    h1 {
+      font-weight: 200;
+      letter-spacing: 0.1em;
+      font-size: 14px;
+    }
+
+    #FileBrowser {
+      border: 1px solid #F0F0F0;
+      padding: 10px;
+    }
+
+  ul {
+  list-style-type: none;
+  padding-left: 16px;
+  }
+
+
+  #myUL {
+    margin: 0;
+    padding: 0;
+  }
+
+.caret {
+  cursor: pointer;
+  position: relative;
+  user-select: none;
+  left: -16px;
+
+}
+
+.caret::before {
+  content: "\25B6";
+  font-size: 8px;
+  color: black;
+  display: inline-block;
+  margin-right: 8px;
+}
+
+.caret-down::before {
+  transform: rotate(90deg); 
+}
+
+.nested {
+  display: none;
+  position: relative;
+  left: -5px;
+}
+
+.active {
+  display: block;
+}
+
+.subtitle{
+  position: relative;
+  font-weight:lighter;
+  font-size: 10px;
+  margin-left: 5px;
+}
+.folder{
+  font-weight: bold;
+}
+.birthtime, .size{
+  float: right;
+}
+.birthtime{
+  width: 100px;
+  text-align: right;
+}
+  </style>
+
+</head>
+<body>
+  <h1>File System</h1>
+  <div id="FileBrowser" ></div>
+  
+  <script>
+
+    let data = null;
+    const jsonUrl = './filesystem.json';
+    let ulContainer = document.createElement('ul');
+
+    const getJson = url => {
+      let xhr = new XMLHttpRequest();
+      xhr.open('GET', url , false);
+
+      xhr.onload = function () {
+        if(xhr.status === 200) {
+          data = JSON.parse(xhr.responseText);
+        } else {
+          console.log(`Error ${xhr.status}: ${xhr.statusText}`);
+        }
+      }
+      xhr.onerror = function() {
+        alert("Request failed");
+      };
+      
+       xhr.send()
+    }
+
+
+    const looping = param => {
+      let ul = document.createElement('ul');
+      if (Object.prototype.toString.call(param) === '[object Object]' ) {
+          if(Array.isArray(param.children)) {
+            let li = document.createElement('li');
+            let span = document.createElement('span');
+            span.classList.add('caret');
+            span.innerHTML = param.path;
+            
+            li.appendChild(span);
+            li.appendChild(subElement(param.children.length))
+            li.appendChild(timeElement(param.birthtime));
+            li.appendChild(looping(param.children));
+            ul.appendChild(li);
+          }
+      }
+      else if(Array.isArray(param)) {
+        ul.classList.add("nested");
+        param.forEach( item => {
+        if(item !== null){
+              let li = document.createElement('li');
+              if(!item.children) {
+                li.innerHTML = item.name;
+                if(item.type === 'file'){
+                  li.appendChild(timeElement(item.birthtime, false));
+                  li.appendChild(sizeElement(item.size))
+                }
+                else if (item.type === 'slink'){
+                  li.innerHTML += `-> ${item.links_to}`
+                  li.appendChild(timeElement(item.birthtime));
+                } else {
+                  li.appendChild(timeElement(item.birthtime, false));
+                }
+              } else if(item.children) {
+                let span = document.createElement('span');
+                span.classList.add("folder");
+                span.innerHTML += item.name;
+                li.appendChild(span);
+
+
+                if(item.children.length !== 0){
+                  span.classList.add("caret");
+                 
+                  li.appendChild(subElement(item.children.length));
+                  li.appendChild(timeElement(item.birthtime));
+                  li.appendChild(looping(item.children))
+                } else {
+                    li.appendChild(timeElement(item.birthtime, false));
+                }
+              }
+              ul.appendChild(li);
+        }})
+      }
+      return ul;
+    }
+
+    const timeElement = (time, getDate = true) => {
+      date = new Date(time);
+      let timeSpan = document.createElement('span');
+      timeSpan.classList.add('birthtime');
+      
+      if(getDate){
+        year = date.getFullYear();
+        month = date.getMonth();
+        dt = date.getDate();
+
+        if (dt < 10) {
+          dt = '0' + dt;
+        }
+        if (month < 10) {
+          month = '0' + month;
+        }
+        timeSpan.innerHTML = (dt+'/' + month + '/'+year)
+        return timeSpan;
+      } 
+      else {
+        hr = date.getHours();
+        min = date.getMinutes();
+        sec = date.getSeconds();
+        if (hr < 10) {
+          hr = '0' + hr;
+        }
+        if (min < 10) {
+          min = '0' + min;
+        }
+        if (sec < 10) {
+          sec = '0' + sec;
+        }
+        timeSpan.innerHTML = (hr+':' + min + ':'+sec);
+        return timeSpan;
+      }
+    }
+
+
+    const sizeElement = size => {
+      let sizeSpan = document.createElement('span');
+          sizeSpan.classList.add('size');
+          sizeSpan.innerHTML = size;
+          return sizeSpan
+    }
+
+    const subElement = subtitle => {
+      let span2 = document.createElement('span');
+          span2.innerHTML = `(${subtitle} items)`;
+          span2.classList.add('subtitle');
+      return span2;
+    }
+
+
+    window.onload = async () => {
+        await getJson(jsonUrl);
+
+        console.log('data', data);
+        
+        if(data){ 
+          document.getElementById('FileBrowser').appendChild(looping(data));
+        }
+        let toggler = document.getElementsByClassName("caret");
+        Array.from(toggler).forEach(item => {
+        item.addEventListener("click", () => {
+          item.parentElement.querySelector('.nested').classList.toggle("active");
+          item.classList.toggle("caret-down");
+        });
+        });
+
+}
+
+
+
+
+  </script>
+</body>
+</html>
