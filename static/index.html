@@ -203,7 +203,6 @@
       const renderChildListAndToggleActiveClasses = (el, input) => {
         el.addEventListener("click", async () => {
           if (el.parentElement.lastChild.nodeName !== "UL") {
-            console.log(el.parentElement);
             await el.parentElement.append(looping(input.children));
           }
           el.classList.toggle("caret-down");
