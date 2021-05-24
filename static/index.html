@@ -27,11 +27,13 @@
         list-style-type: none;
         padding-left: 10px;
         overflow: hidden;
+        margin: 0;
       }
 
       #myUL {
         margin: 0;
         padding: 0;
+        list-style-type: none;
       }
 
       .caret {
@@ -120,50 +122,62 @@
         });
       };
 
-      const looping = (array) => {
+
+      //Classify array's children
+      const renderChildren = (array) => {
         if (Array.isArray(array)) {
           let ul = document.createElement("ul");
           ul.classList.add("nested");
 
-          array.forEach(async (item) => {
+          array.forEach((item) => {
             if (!item) return null;
-            let li = await document.createElement("li");
 
             if (item.type === "file") {
+              let li = document.createElement("li");
               li.append(
-                nameElement(item.name),
+                nameElement(item),
                 timeElement(item.birthtime, false),
                 sizeElement(item.size)
               );
+              ul.appendChild(li);
             } else if (item.type === "slink") {
-              let slinkName = nameElement(item.name);
+              let li = document.createElement("li");
+              let slinkName = nameElement(item);
               slinkName.append(`-> ${item.links_to}`);
               li.append(slinkName, timeElement(item.birthtime));
+              ul.appendChild(li);
             } else if (item.type === "folder") {
-              let folderName = nameElement(item.name);
-              folderName.classList.add("folder");
-
-              if (item.children.length !== 0) {
-                folderName.classList.add("caret");
-                li.append(
-                  folderName,
-                  subtitleElement(item.children.length),
-                  timeElement(item.birthtime)
-                );
-                renderChildListAndToggleActiveClasses(folderName, item);
-              } else {
-                li.append(folderName, timeElement(item.birthtime, false));
-              }
+              let li = folderElement(item);
+              ul.appendChild(li);
             } else {
-              li.append(
-                nameElement(item.name),
-                timeElement(item.birthtime, false)
-              );
+              let li = document.createElement("li");
+              li.append(nameElement(item), timeElement(item.birthtime, false));
+              ul.appendChild(li);
             }
-            ul.appendChild(li);
           });
           return ul;
         }
+      };
+
+
+      //Render different elements
+      const folderElement = (item) => {
+        let li = document.createElement("li");
+        let folderName = nameElement(item);
+        folderName.classList.add("folder");
+
+        if (item.children.length !== 0) {
+          folderName.classList.add("caret");
+          li.append(
+            folderName,
+            subtitleElement(item.children.length),
+            timeElement(item.birthtime)
+          );
+          renderChildListAndToggleActiveClasses(folderName, item);
+        } else {
+          li.append(folderName, timeElement(item.birthtime, false));
+        }
+        return li;
       };
 
       const timeElement = (time, getDate = true) => {
@@ -193,17 +207,22 @@
         return span;
       };
 
-      const nameElement = (name) => {
+      const nameElement = (item) => {
         let span = document.createElement("span");
-        span.innerText = name;
+        if (item.name === "") {
+          span.innerText = item.path;
+        } else {
+          span.innerText = item.name;
+        }
         span.classList.add("name");
         return span;
       };
 
+      //If user click on the folder, we will render its children and toggle classes of visibility.
       const renderChildListAndToggleActiveClasses = (el, input) => {
         el.addEventListener("click", async () => {
           if (el.parentElement.lastChild.nodeName !== "UL") {
-            await el.parentElement.append(looping(input.children));
+            await el.parentElement.append(renderChildren(input.children));
           }
           el.classList.toggle("caret-down");
           el.parentElement.lastChild.classList.toggle("nested");
@@ -219,27 +238,12 @@
             console.error("error", err.statusText);
           });
         console.log("data", data);
-
         if (data == null) return null;
 
-        let myUl = document.createElement("ul");
-        myUl.setAttribute("id", "myUL");
-        let li = document.createElement("li");
-        let myUlName = nameElement(data.name);
-        myUlName.classList.add("folder", "caret");
+        let myList = folderElement(data);
+        myList.setAttribute("id", "myUL");
 
-        myUlName.append(data.path),
-          li.append(
-            myUlName,
-            subtitleElement(data.children.length),
-            timeElement(data.birthtime)
-          );
-
-        renderChildListAndToggleActiveClasses(myUlName, data);
-
-        myUl.appendChild(li);
-
-        document.getElementById("FileBrowser").appendChild(myUl);
+        document.getElementById("FileBrowser").appendChild(myList);
       };
     </script>
   </body>
