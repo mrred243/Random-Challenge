@@ -56,10 +56,6 @@
         display: none;
       }
 
-      .active {
-        display: block;
-      }
-
       .subtitle {
         position: relative;
         font-weight: lighter;
@@ -129,9 +125,9 @@
           let ul = document.createElement("ul");
           ul.classList.add("nested");
 
-          array.forEach((item) => {
+          array.forEach(async (item) => {
             if (!item) return null;
-            let li = document.createElement("li");
+            let li = await document.createElement("li");
 
             if (item.type === "file") {
               li.append(
@@ -152,9 +148,9 @@
                 li.append(
                   folderName,
                   subtitleElement(item.children.length),
-                  timeElement(item.birthtime),
-                  looping(item.children)
+                  timeElement(item.birthtime)
                 );
+                renderChildListAndToggleActiveClasses(folderName, item);
               } else {
                 li.append(folderName, timeElement(item.birthtime, false));
               }
@@ -204,6 +200,17 @@
         return span;
       };
 
+      const renderChildListAndToggleActiveClasses = (el, input) => {
+        el.addEventListener("click", async () => {
+          if (el.parentElement.lastChild.nodeName !== "UL") {
+            console.log(el.parentElement);
+            await el.parentElement.append(looping(input.children));
+          }
+          el.classList.toggle("caret-down");
+          el.parentElement.lastChild.classList.toggle("nested");
+        });
+      };
+
       window.onload = async () => {
         let data = null;
 
@@ -221,26 +228,19 @@
         let li = document.createElement("li");
         let myUlName = nameElement(data.name);
         myUlName.classList.add("folder", "caret");
+
         myUlName.append(data.path),
           li.append(
             myUlName,
             subtitleElement(data.children.length),
-            timeElement(data.birthtime),
-            looping(data.children)
+            timeElement(data.birthtime)
           );
+
+        renderChildListAndToggleActiveClasses(myUlName, data);
+
         myUl.appendChild(li);
 
         document.getElementById("FileBrowser").appendChild(myUl);
-
-        let toggler = document.getElementsByClassName("caret");
-        Array.from(toggler).forEach((item) => {
-          item.addEventListener("click", () => {
-            item.parentElement
-              .querySelector(".nested")
-              .classList.toggle("active");
-            item.classList.toggle("caret-down");
-          });
-        });
       };
     </script>
   </body>
